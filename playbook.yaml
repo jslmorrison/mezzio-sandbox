@@ -1,0 +1,38 @@
+---
+- name: Mezzio project playbook
+  hosts: localhost
+  collections:
+    - containers.podman
+  tasks:
+    - name: Create project pod
+      podman_pod:
+        name: mezzio-project-pod
+        state: created
+        ports:
+          - 8181:80
+          - 9000:9000
+    - name: Build web container
+      podman_image:
+        name: nginx
+        tag: stable
+    - name: Build php container
+      podman_image:
+        name: php
+        tag: 7.4-fpm
+    - name: Run nginx web container in pod
+      podman_container:
+        pod: mezzio-project-pod
+        name: mezzio-nginx
+        image: nginx:stable
+        volume:
+          - "{{ playbook_dir }}:/var/www/mezzio:Z"
+          - "{{ playbook_dir }}/container/mezzio.conf:/etc/nginx/conf.d/default.conf:Z"
+          - "{{ playbook_dir }}/container/index.html:/var/www/index.html:Z"
+        state: present
+    - name: Run php container in pod
+      podman_container:
+        pod: mezzio-project-pod
+        name: mezzio-php
+        image: php7.4-fpm
+        volume:
+          - "{{ playbook_dir }}:/var/www/mezzio:Z"
